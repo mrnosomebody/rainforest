@@ -2,6 +2,10 @@
 
 `docker compose up --build -d`
 
+# Api docs
+
+http://localhost:8000/api/v1/schema/swagger/
+
 # Tests
 
 1. `export DB_HOST=localhost`
