@@ -1,5 +1,6 @@
 from django.utils.decorators import method_decorator
 from django_ratelimit.decorators import ratelimit
+from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.response import Response
 
@@ -16,6 +17,18 @@ from orders.models import Order
 from orders.services.order import cancel_order_service, create_order_service
 
 
+@extend_schema_view(
+    create=extend_schema(
+        request=OrderCreateSerializer,
+        responses=OrderReadSerializer,
+        description="Создание нового заказа с rate limiting 5 запросов в минуту.",
+    ),
+    partial_update=extend_schema(
+        request=OrderUpdateSerializer,
+        responses=OrderReadSerializer,
+        description="Частичное обновление заказа (например, отмена заказа).",
+    ),
+)
 class OrderViewSet(viewsets.ModelViewSet):
     queryset = Order.objects.all()
     pagination_class = DefaultCursorPagination

@@ -9,3 +9,8 @@ class ReportCreateSerializer(serializers.Serializer):
         if data["start_date"] > data["end_date"]:
             raise serializers.ValidationError("start_date must be before end_date.")
         return data
+
+
+class ReportResultSerializer(serializers.Serializer):
+    status = serializers.CharField()
+    result = serializers.JSONField(required=False, allow_null=True)

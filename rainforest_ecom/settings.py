@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "rest_framework",
+    "drf_spectacular",
     "orders",
     "products",
     "reports",
@@ -101,6 +102,13 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
     ],
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+}
+
+SPECTACULAR_SETTINGS = {
+    "TITLE": "Rainforest E-commerce API",
+    "DESCRIPTION": "Документация к API для проекта Rainforest E-commerce.",
+    "VERSION": "1.0.0",
 }
 
 LOGGING = {

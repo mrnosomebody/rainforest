@@ -1,11 +1,15 @@
 import logging
 
 from celery.result import AsyncResult
+from drf_spectacular.utils import extend_schema
 from rest_framework import status
 from rest_framework.response import Response
 from rest_framework.views import APIView
 
-from api.v1.serializers.report_serializers import ReportCreateSerializer
+from api.v1.serializers.report_serializers import (
+    ReportCreateSerializer,
+    ReportResultSerializer,
+)
 from celery_app.tasks.report_tasks import generate_report_task
 
 logger = logging.getLogger(__name__)
@@ -16,20 +20,29 @@ APIView для запуска генерации отчёта в фоне чер
 """
 
 
+@extend_schema(
+    request=ReportCreateSerializer,
+    responses=ReportResultSerializer,
+    description="Запускает генерацию отчёта и возвращает task_id.",
+)
 class ReportView(APIView):
     def get(self, request, *args, **kwargs):
-        serializer = ReportCreateSerializer(data=request.query_params)
-        serializer.is_valid(raise_exception=True)
+        request_serializer = ReportCreateSerializer(data=request.query_params)
+        request_serializer.is_valid(raise_exception=True)
 
         task = generate_report_task.delay(
-            serializer.validated_data["start_date"],
-            serializer.validated_data["end_date"],
+            request_serializer.validated_data["start_date"],
+            request_serializer.validated_data["end_date"],
         )
         logger.info(f"Report generation task submitted, task_id={task.id}")
 
         return Response({"task_id": task.id}, status=status.HTTP_202_ACCEPTED)
 
 
+@extend_schema(
+    responses=ReportResultSerializer,
+    description="Возвращает статус и результат задачи по task_id.",
+)
 class ReportResultView(APIView):
     """
     APIView для проверки статуса задачи генерации отчёта.

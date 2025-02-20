@@ -48,11 +48,13 @@ def _get_profit(orders: QuerySet[Order]) -> Decimal:
 
 
 def _get_returns_count(start_date: datetime, end_date: datetime) -> int:
-    return Order.objects.filter(
-        created_at__gte=start_date,
-        created_at__lte=end_date,
-        status=OrderStatus.CANCELED,
-    ).count()
+    returns_agg = OrderItem.objects.filter(
+        order__created_at__gte=start_date,
+        order__created_at__lte=end_date,
+        order__status="canceled",
+    ).aggregate(total_returns=Sum("quantity"))
+
+    return returns_agg["total_returns"] or 0
 
 
 def _get_units_sold(orders: QuerySet[Order]) -> int:
