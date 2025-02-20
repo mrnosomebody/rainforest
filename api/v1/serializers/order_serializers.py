@@ -1,25 +1,26 @@
-from django.db import transaction
 from rest_framework import serializers
 
-from products.models import Product
 from orders.models import Order, OrderItem
+
 
 class OrderItemReadSerializer(serializers.ModelSerializer):
     product = serializers.PrimaryKeyRelatedField(read_only=True)
-    product_name = serializers.CharField(source='product.name', read_only=True)
+    product_name = serializers.CharField(source="product.name", read_only=True)
 
     class Meta:
         model = OrderItem
-        fields = ['id', 'product', 'product_name', 'quantity', 'price_at_purchase']
+        fields = ["id", "product", "product_name", "quantity", "price_at_purchase"]
         read_only_fields = fields
+
 
 class OrderReadSerializer(serializers.ModelSerializer):
     items = OrderItemReadSerializer(many=True, read_only=True)
 
     class Meta:
         model = Order
-        fields = ['id', 'status', 'created_at', 'updated_at', 'paid_at', 'items']
+        fields = ["id", "status", "created_at", "updated_at", "paid_at", "items"]
         read_only_fields = fields
+
 
 class OrderItemCreateSerializer(serializers.Serializer):
     product_id = serializers.UUIDField()
@@ -38,4 +39,4 @@ class OrderCreateSerializer(serializers.Serializer):
 class OrderUpdateSerializer(serializers.ModelSerializer):
     class Meta:
         model = Order
-        fields = ['status']
+        fields = ["status"]

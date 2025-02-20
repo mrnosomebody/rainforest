@@ -1,71 +1,59 @@
-from http.client import responses
-
-from pydantic import ValidationError
-from rest_framework import viewsets, status
+from django.utils.decorators import method_decorator
+from django_ratelimit.decorators import ratelimit
+from rest_framework import status, viewsets
 from rest_framework.response import Response
 
 from api.v1.exceptions import OrderCreationError
-from api.v1.serializers.order_serializers import OrderCreateSerializer, \
-    OrderUpdateSerializer, OrderReadSerializer
-from orders.dto import OrderCreateDTO
-from orders.models import Order, OrderItem
-from orders.services.order import create_order_service
+from api.v1.pagination import DefaultCursorPagination
+from api.v1.serializers.order_serializers import (
+    OrderCreateSerializer,
+    OrderReadSerializer,
+    OrderUpdateSerializer,
+)
+from orders.dto import OrderDTO, OrderItemDTO
+from orders.enums import OrderStatus
+from orders.models import Order
+from orders.services.order import cancel_order_service, create_order_service
 
 
 class OrderViewSet(viewsets.ModelViewSet):
+    queryset = Order.objects.all()
+    pagination_class = DefaultCursorPagination
+
+    serializer_class_map = {
+        "create": OrderCreateSerializer,
+        "update": OrderUpdateSerializer,
+        "partial_update": OrderUpdateSerializer,
+    }
+
     def get_serializer_class(self):
-        if self.action == 'create':
-            return OrderCreateSerializer
-        elif self.action in ['update', 'partial_update']:
-            return OrderUpdateSerializer
+        return self.serializer_class_map.get(self.action, OrderReadSerializer)
 
-        return OrderReadSerializer
-
-    def get_queryset(self):
-        return Order.objects.all()
-
+    @method_decorator(ratelimit(key="ip", rate="5/m", block=True))
     def create(self, request, *args, **kwargs):
-        print(request.data)
-        serializer = OrderCreateSerializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        validated_data = serializer.validated_data['items']
+        request_serializer = self.get_serializer(data=request.data)
+        request_serializer.is_valid(raise_exception=True)
+        validated_data = request_serializer.validated_data["items"]
+
+        order_dto = OrderDTO(items=[OrderItemDTO(**item) for item in validated_data])
 
         try:
-            order_create_dto = OrderCreateDTO(items=validated_data)
-        except ValidationError as exc:
-            return Response(exc.errors(), status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            order = create_order_service(order_create_dto)
-            print(order)
-            print(order.__dict__)
+            order = create_order_service(order_dto)
         except OrderCreationError as e:
             return Response({"detail": str(e)}, status=status.HTTP_400_BAD_REQUEST)
-        print(order)
-        print(order.__dict__)
+
         response_serializer = OrderReadSerializer(order)
         return Response(response_serializer.data, status=status.HTTP_201_CREATED)
 
+    @method_decorator(ratelimit(key="ip", rate="5/m", block=True))
     def partial_update(self, request, *args, **kwargs):
-        """
-        Позволяет обновить статус заказа.
-        Если статус меняется на 'canceled', возвращаем товары на склад.
-        Пример payload для отмены:
-        { "status": "canceled" }
-        """
         order = self.get_object()
-        new_status = request.data.get('status')
-        if new_status == 'canceled' and order.status != 'canceled':
-            # Возвращаем товары на склад
-            for item in order.items.all():
-                product = item.product
-                product.stock += item.quantity
-                product.save()
-            order.status = 'canceled'
-            order.save()
+        new_status = request.data.get("status")
+
+        if new_status == OrderStatus.CANCELED:
+            cancel_order_service(order=order)
 
         serializer = self.get_serializer(order, data=request.data, partial=True)
         serializer.is_valid(raise_exception=True)
         self.perform_update(serializer)
         return Response(serializer.data)
-

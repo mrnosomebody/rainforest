@@ -1,12 +1,13 @@
+from dataclasses import dataclass
 from uuid import UUID
 
-from pydantic import BaseModel, conint
 
-
-class OrderItemCreateDTO(BaseModel):
+@dataclass
+class OrderItemDTO:
     product_id: UUID
-    quantity: conint(gt=0)  # гарантируем, что количество > 0
+    quantity: int
 
-class OrderCreateDTO(BaseModel):
-    items: list[OrderItemCreateDTO]
 
+@dataclass
+class OrderDTO:
+    items: list[OrderItemDTO]

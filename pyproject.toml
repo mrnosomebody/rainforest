@@ -14,9 +14,11 @@ dependencies = [
     "redis (>=5.2.1,<6.0.0)",
     "django-redis (>=5.4.0,<6.0.0)",
     "python-dotenv (>=1.0.1,<2.0.0)",
-    "celery (>=5.4.0,<6.0.0)",
     "django-filter (>=25.1,<26.0)",
-    "pydantic (>=2.10.6,<3.0.0)"
+    "pre-commit (>=4.1.0,<5.0.0)",
+    "django-request-logging (>=0.7.5,<0.8.0)",
+    "django-ratelimit (>=4.1.0,<5.0.0)",
+    "celery (>=5.4.0,<6.0.0)",
 ]
 
 
@@ -27,4 +29,31 @@ build-backend = "poetry.core.masonry.api"
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
 pytest-django = "^4.10.0"
+coverage = "^7.6.12"
 
+[tool.isort]
+profile = "black"
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+use_parentheses = true
+line_length = 88
+
+[tool.pytest.ini_options]
+DJANGO_SETTINGS_MODULE = "rainforest_ecom.settings"
+python_files = ["tests.py", "test_*.py", "*_tests.py"]
+
+[tool.coverage.run]
+branch = true
+source = [
+    "orders",
+    "products",
+]
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "if __name__ == .__main__.:",
+    "def __str__",
+    "def __repr__",
+]
